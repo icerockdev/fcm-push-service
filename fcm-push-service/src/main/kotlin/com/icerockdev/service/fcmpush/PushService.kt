@@ -23,7 +23,8 @@ import kotlinx.coroutines.async
 import org.slf4j.LoggerFactory
 
 class PushService(
-    private val coroutineScope: CoroutineScope?,
+    private val coroutineScope: CoroutineScope,
+    private val pushRepository: IPushRepository,
     private val config: FCMConfig,
     private val logLevel: LogLevel = LogLevel.INFO,
     private var client: HttpClient = HttpClient(Apache)
@@ -45,48 +46,67 @@ class PushService(
         }
     }
 
-    fun sendAsync(payLoad: FCMPayLoad): Deferred<FCMResponse?> {
+    fun sendAsync(payLoad: FCMPayLoad): Deferred<PushResult> {
         if (payLoad.tokenList.isEmpty()) {
             throw PushException("Unsupported empty token list")
         }
 
-        val payloadObject = prepareRequestBody(payLoad)
+        val chunkedTokenList = payLoad.tokenList.chunked(FCM_TOKEN_CHUNK)
 
-        if (coroutineScope === null) {
-            throw PushException("Async sending unsupported")
-        }
 
         return coroutineScope.async {
-            try {
-                val response = client.post<FCMResponse>(config.apiUrl) {
-                    contentType(ContentType.Application.Json)
-                    body = payloadObject
-                }
-                if (response.failure > 0) { // has wrong tokens
-                    val tokenList = payLoad.tokenList
+            var success = 0
+            var failure = 0
 
-                    response.results.forEachIndexed { index, message ->
-                        if (message.error === null) {
-                            return@forEachIndexed
-                        }
-                        if (tokenList.size < index) {
-                            return@forEachIndexed
-                        }
-                        response.invalidTokenList.add(tokenList[index])
-                    }
+            chunkedTokenList.forEach { tokenList ->
+                val requestData = prepareRequestBody(payLoad, tokenList)
+                val response = sendChunk(requestData)
+                if (response == null) {
+                    failure += tokenList.size
+                    return@forEach
                 }
-                response
-            } catch (t: Throwable) {
-                logger.error(t.localizedMessage)
-                null
+                success += response.success
+                failure += response.failure
             }
+            return@async PushResult(
+                success = success,
+                failure = failure
+            )
+
         }
     }
 
-    private fun prepareRequestBody(payLoad: FCMPayLoad): RequestData {
+    private suspend fun sendChunk(payloadObject: RequestData): FCMResponse? {
+        return try {
+            val response = client.post<FCMResponse>(config.apiUrl) {
+                contentType(ContentType.Application.Json)
+                body = payloadObject
+            }
+            if (response.failure > 0) { // has wrong tokens
+                val invalidTokenList = ArrayList<String>()
+                val tokenList = payloadObject.registrationTokenList!!
+                response.results.forEachIndexed { index, message ->
+                    if (message.error === null) {
+                        return@forEachIndexed
+                    }
+                    if (tokenList.size < index) {
+                        return@forEachIndexed
+                    }
+                    invalidTokenList.add(tokenList[index])
+                }
+                pushRepository.deleteByTokenList(invalidTokenList)
+            }
+            response
+        } catch (t: Throwable) {
+            logger.error(t.localizedMessage)
+            null
+        }
+    }
+
+    private fun prepareRequestBody(payLoad: FCMPayLoad, tokenList: List<String>): RequestData {
         return RequestData(
             data = payLoad.dataObject,
-            registrationTokenList = payLoad.tokenList,
+            registrationTokenList = tokenList,
             condition = payLoad.condition,
             notification = payLoad.notificationObject,
             priority = payLoad.priority.value
@@ -95,6 +115,7 @@ class PushService(
 
     private companion object {
         val logger: org.slf4j.Logger = LoggerFactory.getLogger(PushService::class.java)
+        private const val FCM_TOKEN_CHUNK = 1000
     }
 
     override fun close() {

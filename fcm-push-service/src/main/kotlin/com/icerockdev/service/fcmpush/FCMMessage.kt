@@ -6,7 +6,7 @@ package com.icerockdev.service.fcmpush
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class FCMMessage(
+internal data class FCMMessage(
     @JsonProperty("message_id")
     val messageId: String?,
     val error: String?

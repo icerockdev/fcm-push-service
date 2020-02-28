@@ -4,17 +4,14 @@
 
 package com.icerockdev.sample
 
-import com.icerockdev.service.fcmpush.FCMConfig
-import com.icerockdev.service.fcmpush.FCMPayLoad
-import com.icerockdev.service.fcmpush.NotificationData
-import com.icerockdev.service.fcmpush.PushService
+import com.icerockdev.service.fcmpush.*
 import kotlinx.coroutines.*
 
 object Main {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val validServerKey = "VALID_SERVER_KEY"
-    private val validClientToken = "VALID_TOKEN"
+    private const val validServerKey = "VALID_SERVER_KEY"
+    private const val validClientToken = "VALID_TOKEN"
 
     private val notificationObject = NotificationData(
         title = "title",
@@ -25,7 +22,13 @@ object Main {
         coroutineScope = scope,
         config = FCMConfig(
             serverKey = validServerKey
-        )
+        ),
+        pushRepository = object : IPushRepository {
+            override fun deleteByTokenList(tokenList: List<String>): Int {
+                println(tokenList)
+                return 0
+            }
+        }
     )
 
     @JvmStatic
@@ -58,9 +61,6 @@ object Main {
             )
         ).await()
 
-        println("Push sanded")
-        if (result != null && result.invalidTokenList.isNotEmpty()) {
-            println("Drop invalid tokens here ${result.invalidTokenList}")
-        }
+        println("Push sent")
     }
 }

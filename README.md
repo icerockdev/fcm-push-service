@@ -8,7 +8,7 @@ repositories {
 }
 
 // Append dependency
-implementation("com.icerockdev.service:fcm-push-service:0.0.1")
+implementation("com.icerockdev.service:fcm-push-service:0.0.2")
 ````
 
 ## Koin configure
@@ -23,7 +23,13 @@ single {
         coroutineScope = fcmScope,
         config = FCMConfig(
             serverKey = appConf.getString("fcm.serverKey")
-        )
+        ),
+        pushRepository = object : IPushRepository {
+            override fun deleteByTokenList(tokenList: List<String>): Int {
+                // remove wrong tokens here
+                return 0
+            }
+        }
     )
 }
 

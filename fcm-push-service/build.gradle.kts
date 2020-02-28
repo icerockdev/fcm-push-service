@@ -3,7 +3,7 @@
  */
 
 group = "com.icerockdev.service"
-version = "0.0.1"
+version = "0.0.2"
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -12,7 +12,6 @@ plugins {
     id("java-library")
 }
 
-apply(plugin = "java")
 apply(plugin = "kotlin")
 
 val sourcesJar by tasks.registering(Jar::class) {

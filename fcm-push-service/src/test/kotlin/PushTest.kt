@@ -110,7 +110,13 @@ class PushTest {
     private val pushService = PushService(
         coroutineScope = scope,
         config = fcmConfig,
-        client = client
+        client = client,
+        pushRepository = object : IPushRepository {
+            override fun deleteByTokenList(tokenList: List<String>): Int {
+                println(tokenList.size)
+                return tokenList.size
+            }
+        }
     )
 
     @Test
@@ -145,8 +151,6 @@ class PushTest {
         assertNotNull(result)
         assertEquals(1, result.success)
         assertEquals(2, result.failure)
-        assertEquals(3, result.results.size)
-        assertEquals(2, result.invalidTokenList.size)
     }
 
     @Test
