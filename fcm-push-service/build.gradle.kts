@@ -3,7 +3,7 @@
  */
 
 group = "com.icerockdev.service"
-version = "0.0.2"
+version = "0.1.0"
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -15,7 +15,7 @@ plugins {
 apply(plugin = "kotlin")
 
 val sourcesJar by tasks.registering(Jar::class) {
-    classifier = "sources"
+    archiveClassifier.set("sources")
     from(sourceSets.main.get().allSource)
 }
 
@@ -34,19 +34,16 @@ dependencies {
     testImplementation("io.ktor:ktor-server-tests:${properties["ktor_version"]}")
 
     testImplementation("io.ktor:ktor-client-mock:${properties["ktor_version"]}")
-    testImplementation("io.ktor:ktor-client-mock-jvm:${properties["ktor_version"]}")
-    testImplementation("io.ktor:ktor-client-mock-js:${properties["ktor_version"]}")
-    testImplementation("io.ktor:ktor-client-mock-native:${properties["ktor_version"]}")
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 }
 
