@@ -8,7 +8,7 @@ repositories {
 }
 
 // Append dependency
-implementation("com.icerockdev.service:fcm-push-service:0.0.2")
+implementation("com.icerockdev.service:fcm-push-service:0.1.0")
 ````
 
 ## Koin configure
