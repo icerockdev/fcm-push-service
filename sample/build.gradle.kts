@@ -16,39 +16,36 @@ apply(plugin = "java")
 apply(plugin = "kotlin")
 
 repositories {
-    maven { url = uri("https://dl.bintray.com/icerockdev/backend") }
+    mavenCentral()
 }
 
 application {
-    mainClassName = "com.icerockdev.sample.Main"
+    mainClass.set("com.icerockdev.sample.Main")
 }
 
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${properties["kotlin_version"]}")
-
-//    implementation(project(":fcm-push-service"))
-    implementation("com.icerockdev.service:fcm-push-service:0.0.2")
+    implementation(project(":fcm-push-service"))
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8.toString()
+        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 }
 
 tasks.jar {
-    archiveName = "sample.jar"
-    destinationDir = file("${project.rootDir}/build")
+    archiveFileName.set("sample.jar")
+    destinationDirectory.set(file("${project.rootDir}/build"))
     manifest {
         attributes(
-                "Main-Class" to application.mainClassName,
-                "Class-Path" to configurations.runtimeClasspath.get().files.joinToString(" ") { "libs/${it.name}" }
+            "Main-Class" to application.mainClass,
+            "Class-Path" to configurations.runtimeClasspath.get().files.joinToString(" ") { "libs/${it.name}" }
         )
     }
 }

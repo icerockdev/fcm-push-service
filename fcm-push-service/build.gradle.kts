@@ -5,7 +5,7 @@ import kotlin.text.String
  */
 
 group = "com.icerockdev.service"
-version = "0.1.1"
+version = "0.2.0"
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -23,20 +23,17 @@ val sourcesJar by tasks.registering(Jar::class) {
 }
 
 dependencies {
-    // kotlin
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${properties["kotlin_version"]}")
     // logging
     implementation("ch.qos.logback:logback-classic:${properties["logback_version"]}")
     implementation("io.ktor:ktor-client-apache:${properties["ktor_version"]}")
-    api("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${properties["coroutines_version"]}")
     api("io.ktor:ktor-client-logging-jvm:${properties["ktor_version"]}")
 
     implementation("io.ktor:ktor-client-jackson:${properties["ktor_version"]}")
 
     // tests
     testImplementation("io.ktor:ktor-server-tests:${properties["ktor_version"]}")
-
     testImplementation("io.ktor:ktor-client-mock:${properties["ktor_version"]}")
+    testImplementation(kotlin("test"))
 }
 
 java {

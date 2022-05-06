@@ -6,19 +6,32 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.util.StdDateFormat
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import com.icerockdev.service.fcmpush.*
+import com.icerockdev.service.fcmpush.FCMConfig
+import com.icerockdev.service.fcmpush.FCMMessage
+import com.icerockdev.service.fcmpush.FCMPayLoad
+import com.icerockdev.service.fcmpush.FCMResponse
+import com.icerockdev.service.fcmpush.IPushRepository
+import com.icerockdev.service.fcmpush.NotificationData
+import com.icerockdev.service.fcmpush.PushService
+import com.icerockdev.service.fcmpush.RequestData
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
-import io.ktor.http.*
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.Url
 import io.ktor.http.content.TextContent
+import io.ktor.http.fullPath
+import io.ktor.http.headersOf
+import io.ktor.http.hostWithPort
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class PushTest {
     private val validServerKey = "VALID_SERVER_KEY"
@@ -77,8 +90,8 @@ class PushTest {
                             )
                         }
 
-                        var success = 0;
-                        var failure = 0;
+                        var success = 0
+                        var failure = 0
                         val messageList = ArrayList<FCMMessage>()
                         for (token in data.registrationTokenList) {
                             if (token == validClientToken) {
