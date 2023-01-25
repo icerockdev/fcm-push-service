@@ -5,7 +5,7 @@ import kotlin.text.String
  */
 
 group = "com.icerockdev.service"
-version = "1.0.0-beta"
+version = "1.0.0"
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
