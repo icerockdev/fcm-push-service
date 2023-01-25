@@ -5,7 +5,7 @@ import kotlin.text.String
  */
 
 group = "com.icerockdev.service"
-version = "0.3.0"
+version = "1.0.0-beta"
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -26,9 +26,10 @@ dependencies {
     // logging
     implementation("ch.qos.logback:logback-classic:${properties["logback_version"]}")
     implementation("io.ktor:ktor-client-apache:${properties["ktor_version"]}")
-    api("io.ktor:ktor-client-logging-jvm:${properties["ktor_version"]}")
+    api("io.ktor:ktor-client-logging:${properties["ktor_version"]}")
 
-    implementation("io.ktor:ktor-client-jackson:${properties["ktor_version"]}")
+    implementation("io.ktor:ktor-client-content-negotiation:${properties["ktor_version"]}")
+    implementation("io.ktor:ktor-serialization-jackson:${properties["ktor_version"]}")
 
     // tests
     testImplementation("io.ktor:ktor-server-tests:${properties["ktor_version"]}")
@@ -104,6 +105,7 @@ publishing {
         }
 
         signing {
+            setRequired({!properties.containsKey("libraryPublishToMavenLocal")})
             val signingKeyId: String? = System.getenv("SIGNING_KEY_ID")
             val signingPassword: String? = System.getenv("SIGNING_PASSWORD")
             val signingKey: String? = System.getenv("SIGNING_KEY")?.let { base64Key ->

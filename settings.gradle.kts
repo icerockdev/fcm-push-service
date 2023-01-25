@@ -28,7 +28,7 @@ include(":fcm-push-service")
 //
 val properties = startParameter.projectProperties
 
-// ./gradlew -PlibraryPublish publishToMavenLocal
+// ./gradlew -PlibraryPublish -PlibraryPublishToMavenLocals publishToMavenLocal
 // ./gradlew :fcm-push-service:publish -PlibraryPublish
 val libraryPublish: Boolean = properties.containsKey("libraryPublish")
 if(!libraryPublish) {
