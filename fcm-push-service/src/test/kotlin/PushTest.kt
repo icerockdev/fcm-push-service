@@ -17,11 +17,11 @@ import com.icerockdev.service.fcmpush.RequestData
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
-import io.ktor.http.content.TextContent
 import io.ktor.http.fullPath
 import io.ktor.http.headersOf
 import io.ktor.http.hostWithPort
@@ -68,13 +68,13 @@ class PushTest {
 
                         if (authorization != "key=$validServerKey") {
                             return@addHandler respond(
-                                "The request's Authentication (Server-) Key contained an invalid or malformed FCM-Token (a.k.a. IID-Token).",
+                                "The request's Authentication (Server-) Key contained an invalid or " +
+                                        "malformed FCM-Token (a.k.a. IID-Token).",
                                 HttpStatusCode.Unauthorized
                             )
                         }
 
-                        val textContent = request.body as TextContent
-                        val data = mapper.readValue(textContent.text, RequestData::class.java)
+                        val data = mapper.readValue(request.body.toByteArray(), RequestData::class.java)
 
                         if (data.data === null || data.data.isEmpty()) {
                             return@addHandler respond(

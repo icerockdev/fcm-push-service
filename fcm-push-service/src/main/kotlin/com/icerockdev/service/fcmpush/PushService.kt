@@ -6,17 +6,19 @@ package com.icerockdev.service.fcmpush
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.engine.apache.Apache
-import io.ktor.client.features.DefaultRequest
-import io.ktor.client.features.json.JacksonSerializer
-import io.ktor.client.features.json.JsonFeature
-import io.ktor.client.features.logging.DEFAULT
-import io.ktor.client.features.logging.LogLevel
-import io.ktor.client.features.logging.Logger
-import io.ktor.client.features.logging.Logging
+import io.ktor.client.plugins.DefaultRequest
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.DEFAULT
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.serialization.jackson.jackson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -31,9 +33,9 @@ class PushService(
 ) : AutoCloseable {
     init {
         client = client.config {
-            install(JsonFeature) {
-                serializer = JacksonSerializer {
-                    setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            install(ContentNegotiation) {
+                jackson {
+                    setSerializationInclusion(JsonInclude.Include.NON_NULL)
                 }
             }
             install(DefaultRequest) {
@@ -78,10 +80,10 @@ class PushService(
 
     private suspend fun sendChunk(payloadObject: RequestData): FCMResponse? {
         return try {
-            val response = client.post<FCMResponse>(config.apiUrl) {
+            val response: FCMResponse = client.post(config.apiUrl) {
                 contentType(ContentType.Application.Json)
-                body = payloadObject
-            }
+                setBody(payloadObject)
+            }.body()
             if (response.failure > 0) { // has wrong tokens
                 val invalidTokenList = ArrayList<String>()
                 val tokenList = payloadObject.registrationTokenList!!
@@ -98,7 +100,7 @@ class PushService(
             }
             response
         } catch (t: Throwable) {
-            logger.error(t.localizedMessage)
+            logger.error(t.localizedMessage, t)
             null
         }
     }
