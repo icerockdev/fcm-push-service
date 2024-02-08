@@ -4,10 +4,8 @@
 
 package com.icerockdev.service.fcmpush
 
-import com.fasterxml.jackson.annotation.JsonProperty
-
 /**
- * @see <a href="https://firebase.google.com/docs/cloud-messaging/http-server-ref#notification-payload-support">link</a>
+ * @see <a href="https://firebase.google.com/docs/cloud-messaging/send-message">link</a>
  */
 data class NotificationData(
     /**
@@ -25,8 +23,8 @@ data class NotificationData(
     /**
      * android/ios: what should happen upon notification click. when empty on android the default activity
      * will be launched passing any payload to an intent.
+     * on android: intent name, on ios: category in apns payload
      */
-    @JsonProperty("click_action")
     val clickAction: String? = null,
     /**
      * iOS only: will add small red bubbles indicating the number of notifications to your apps icon

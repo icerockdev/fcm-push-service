@@ -4,13 +4,11 @@
 
 package com.icerockdev.service.fcmpush
 
-import com.fasterxml.jackson.annotation.JsonProperty
-
 internal data class RequestData(
     val data: Map<String, String>?,
-    @JsonProperty("registration_ids")
     val registrationTokenList: List<String>?,
     val condition: String?,
+    val topic: String?,
     val notification: NotificationData?,
-    val priority: String
+    val priority: PushPriority
 )

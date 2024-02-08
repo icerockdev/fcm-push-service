@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.icerockdev"
-version = "0.0.1"
+version = "0.1.0"
 
 apply(plugin = "java")
 apply(plugin = "kotlin")
