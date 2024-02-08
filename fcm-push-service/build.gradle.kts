@@ -28,9 +28,6 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:${properties["coroutines_version"]}")
 
     implementation("com.google.firebase:firebase-admin:${properties["firebase_admin_sdk_version"]}")
-
-    // tests
-    testImplementation(kotlin("test"))
 }
 
 java {
