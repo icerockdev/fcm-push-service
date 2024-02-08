@@ -4,13 +4,21 @@
 
 package com.icerockdev.sample
 
-import com.icerockdev.service.fcmpush.*
-import kotlinx.coroutines.*
+import com.icerockdev.service.fcmpush.FCMConfig
+import com.icerockdev.service.fcmpush.FCMPayLoad
+import com.icerockdev.service.fcmpush.IPushRepository
+import com.icerockdev.service.fcmpush.NotificationData
+import com.icerockdev.service.fcmpush.PushService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
 
 object Main {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private const val validServerKey = "VALID_SERVER_KEY"
+    private const val googleServiceAccountJson = "VALID_GOOGLE_SERVICE_ACCOUNT_JSON"
     private const val validClientToken = "VALID_TOKEN"
 
     private val notificationObject = NotificationData(
@@ -21,7 +29,7 @@ object Main {
     private val pushService = PushService(
         coroutineScope = scope,
         config = FCMConfig(
-            serverKey = validServerKey
+            googleServiceAccountJson = googleServiceAccountJson
         ),
         pushRepository = object : IPushRepository {
             override fun deleteByTokenList(tokenList: List<String>): Int {
@@ -37,7 +45,6 @@ object Main {
         runBlocking {
             send(listOf(1, 2, 3), notificationObject, mapOf("test" to "data"))
         }
-        pushService.close()
         scope.cancel()
         println("End")
     }
@@ -53,7 +60,7 @@ object Main {
             return
         }
 
-        val result = pushService.sendAsync(
+        pushService.sendAsync(
             payLoad = FCMPayLoad(
                 dataObject = data,
                 notificationObject = notification,

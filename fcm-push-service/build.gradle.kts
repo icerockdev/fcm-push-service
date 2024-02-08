@@ -5,7 +5,7 @@ import kotlin.text.String
  */
 
 group = "com.icerockdev.service"
-version = "1.0.0"
+version = "2.0.0"
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -25,15 +25,11 @@ val sourcesJar by tasks.registering(Jar::class) {
 dependencies {
     // logging
     implementation("ch.qos.logback:logback-classic:${properties["logback_version"]}")
-    implementation("io.ktor:ktor-client-apache:${properties["ktor_version"]}")
-    api("io.ktor:ktor-client-logging:${properties["ktor_version"]}")
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:${properties["coroutines_version"]}")
 
-    implementation("io.ktor:ktor-client-content-negotiation:${properties["ktor_version"]}")
-    implementation("io.ktor:ktor-serialization-jackson:${properties["ktor_version"]}")
+    implementation("com.google.firebase:firebase-admin:${properties["firebase_admin_sdk_version"]}")
 
     // tests
-    testImplementation("io.ktor:ktor-server-tests:${properties["ktor_version"]}")
-    testImplementation("io.ktor:ktor-client-mock:${properties["ktor_version"]}")
     testImplementation(kotlin("test"))
 }
 

@@ -4,21 +4,20 @@
 
 package com.icerockdev.service.fcmpush
 
-import com.fasterxml.jackson.annotation.JsonInclude
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.apache.Apache
-import io.ktor.client.plugins.DefaultRequest
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.DEFAULT
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.serialization.jackson.jackson
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import com.google.firebase.messaging.AndroidConfig
+import com.google.firebase.messaging.AndroidConfig.Priority
+import com.google.firebase.messaging.AndroidNotification
+import com.google.firebase.messaging.ApnsConfig
+import com.google.firebase.messaging.Aps
+import com.google.firebase.messaging.BatchResponse
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.Message
+import com.google.firebase.messaging.MulticastMessage
+import com.google.firebase.messaging.Notification
+import com.google.firebase.messaging.SendResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -27,25 +26,15 @@ import org.slf4j.LoggerFactory
 class PushService(
     private val coroutineScope: CoroutineScope,
     private val pushRepository: IPushRepository,
-    private val config: FCMConfig,
-    private val logLevel: LogLevel = LogLevel.INFO,
-    private var client: HttpClient = HttpClient(Apache)
-) : AutoCloseable {
+    config: FCMConfig
+) {
+    private val firebaseMessaging: FirebaseMessaging
+
     init {
-        client = client.config {
-            install(ContentNegotiation) {
-                jackson {
-                    setSerializationInclusion(JsonInclude.Include.NON_NULL)
-                }
-            }
-            install(DefaultRequest) {
-                headers.append("Authorization", "key=${config.serverKey}")
-            }
-            install(Logging) {
-                logger = Logger.DEFAULT
-                this.level = logLevel
-            }
-        }
+        val options = FirebaseOptions.builder()
+            .setCredentials(GoogleCredentials.fromStream(config.googleServiceAccountJson.byteInputStream()))
+            .build()
+        firebaseMessaging = FirebaseMessaging.getInstance(FirebaseApp.initializeApp(options))
     }
 
     fun sendAsync(payLoad: FCMPayLoad): Deferred<PushResult> {
@@ -55,40 +44,87 @@ class PushService(
 
         val chunkedTokenList = payLoad.tokenList.chunked(FCM_TOKEN_CHUNK)
 
-
         return coroutineScope.async {
             var success = 0
             var failure = 0
 
             chunkedTokenList.forEach { tokenList ->
                 val requestData = prepareRequestBody(payLoad, tokenList)
-                val response = sendChunk(requestData)
+                val response = if (requestData.condition != null || requestData.topic != null) {
+                    send(requestData)
+                } else {
+                    sendChunk(requestData)
+                }
+
                 if (response == null) {
                     failure += tokenList.size
                     return@forEach
                 }
-                success += response.success
-                failure += response.failure
+                success += response.successCount
+                failure += response.failureCount
             }
             return@async PushResult(
                 success = success,
                 failure = failure
             )
-
         }
     }
 
-    private suspend fun sendChunk(payloadObject: RequestData): FCMResponse? {
+    private fun send(payloadObject: RequestData): BatchResponse? {
         return try {
-            val response: FCMResponse = client.post(config.apiUrl) {
-                contentType(ContentType.Application.Json)
-                setBody(payloadObject)
-            }.body()
-            if (response.failure > 0) { // has wrong tokens
+            val token = payloadObject.registrationTokenList?.firstOrNull()
+
+            val msg = Message.builder()
+                .setToken(token)
+                .setCondition(payloadObject.condition)
+                .setTopic(payloadObject.topic)
+                .setNotification(getNotification(payloadObject))
+                .setAndroidConfig(getAndroidConfig(payloadObject))
+                .setApnsConfig(getApnsConfig(payloadObject))
+                .putAllData(payloadObject.data ?: emptyMap())
+                .build()
+
+            val messageId = firebaseMessaging.send(msg)
+            if (messageId == null && token != null) { // wrong token
+                pushRepository.deleteByTokenList(listOf(token))
+            }
+
+            return object : BatchResponse {
+                override fun getResponses(): MutableList<SendResponse> {
+                    return mutableListOf()
+                }
+
+                override fun getSuccessCount(): Int {
+                    return messageId?.let { 1 } ?: 0
+                }
+
+                override fun getFailureCount(): Int {
+                    return messageId?.let { 0 } ?: 1
+                }
+            }
+        } catch (t: Throwable) {
+            logger.error(t.localizedMessage, t)
+            null
+        }
+    }
+
+    private fun sendChunk(payloadObject: RequestData): BatchResponse? {
+        return try {
+            val msg = MulticastMessage.builder()
+                .addAllTokens(payloadObject.registrationTokenList)
+                .setNotification(getNotification(payloadObject))
+                .setAndroidConfig(getAndroidConfig(payloadObject))
+                .setApnsConfig(getApnsConfig(payloadObject))
+                .putAllData(payloadObject.data ?: emptyMap())
+                .build()
+
+            val response = firebaseMessaging.sendEachForMulticast(msg)
+
+            if (response.failureCount > 0) { // has wrong tokens
                 val invalidTokenList = ArrayList<String>()
                 val tokenList = payloadObject.registrationTokenList!!
-                response.results.forEachIndexed { index, message ->
-                    if (message.error === null) {
+                response.responses.forEachIndexed { index, message ->
+                    if (message.isSuccessful) {
                         return@forEachIndexed
                     }
                     if (tokenList.size < index) {
@@ -105,22 +141,56 @@ class PushService(
         }
     }
 
+    private fun getNotification(payloadObject: RequestData): Notification {
+        return Notification.builder()
+            .setTitle(payloadObject.notification?.title)
+            .setBody(payloadObject.notification?.body)
+            .setImage(payloadObject.notification?.icon)
+            .build()
+    }
+
+    private fun getAndroidConfig(payloadObject: RequestData): AndroidConfig {
+        return AndroidConfig.builder()
+            .setNotification(
+                AndroidNotification.builder()
+                    .setTitle(payloadObject.notification?.title)
+                    .setBody(payloadObject.notification?.body)
+                    .setClickAction(payloadObject.notification?.clickAction)
+                    .setColor(payloadObject.notification?.color)
+                    .setImage(payloadObject.notification?.icon)
+                    .setSound(payloadObject.notification?.sound)
+                    .setTag(payloadObject.notification?.tag)
+                    .build()
+            )
+            .setPriority(Priority.valueOf(payloadObject.priority.value))
+            .build()
+    }
+
+    private fun getApnsConfig(payloadObject: RequestData): ApnsConfig {
+        return ApnsConfig.builder()
+            .setAps(
+                Aps.builder()
+                    .setSound(payloadObject.notification?.sound)
+                    .setBadge(payloadObject.notification?.badge?.toInt() ?: 0)
+                    .setCategory(payloadObject.notification?.clickAction)
+                    .build()
+            )
+            .build()
+    }
+
     private fun prepareRequestBody(payLoad: FCMPayLoad, tokenList: List<String>): RequestData {
         return RequestData(
             data = payLoad.dataObject,
             registrationTokenList = tokenList,
             condition = payLoad.condition,
+            topic = payLoad.topic,
             notification = payLoad.notificationObject,
-            priority = payLoad.priority.value
+            priority = payLoad.priority
         )
     }
 
     private companion object {
         val logger: org.slf4j.Logger = LoggerFactory.getLogger(PushService::class.java)
         private const val FCM_TOKEN_CHUNK = 1000
-    }
-
-    override fun close() {
-        client.close()
     }
 }
