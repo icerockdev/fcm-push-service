@@ -1,5 +1,5 @@
 # Fcm push service
-
+## **NOTE. Only sending with device tokens is supported**
 ## Installation
 ````kotlin
 // Append repository
@@ -8,7 +8,7 @@ repositories {
 }
 
 // Append dependency
-implementation("com.icerockdev.service:fcm-push-service:2.0.0")
+implementation("com.icerockdev.service:fcm-push-service:2.1.0")
 ````
 
 ## Koin configure
@@ -44,7 +44,7 @@ class Container : KoinComponent {
 ````
 // application.conf
 fcm {
-    serverKey = ${FCM_SERVER_KEY}
+    googleServiceAccountJson = ${GOOGLE_SERVICE_ACCOUNT_JSON}
 }
 ````
 
@@ -57,6 +57,17 @@ pushService.sendAsync(
         tokenList = tokens
     )
 )
+````
+
+## Send data with an example of receiving a response
+````kotlin
+val result: PushResult = pushService.sendAsync(
+    payLoad = FCMPayLoad(
+        dataObject = data,
+        notificationObject = notification,
+        tokenList = tokens
+    )
+).await()
 ````
 
 ## Contributing

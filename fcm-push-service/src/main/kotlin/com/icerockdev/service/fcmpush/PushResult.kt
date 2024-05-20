@@ -4,7 +4,8 @@
 
 package com.icerockdev.service.fcmpush
 
-class PushResult(
+data class PushResult(
     val success: Int,
-    val failure: Int
+    val failure: Int,
+    val pushSendResultList: List<PushSendResult>
 )
