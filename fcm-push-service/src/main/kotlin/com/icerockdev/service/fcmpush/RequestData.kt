@@ -6,9 +6,7 @@ package com.icerockdev.service.fcmpush
 
 internal data class RequestData(
     val data: Map<String, String>?,
-    val registrationTokenList: List<String>?,
-    val condition: String?,
-    val topic: String?,
+    val registrationTokenList: List<String>,
     val notification: NotificationData?,
     val priority: PushPriority
 )
