@@ -54,7 +54,8 @@ class PushService(
                     pushSendResultList.addAll(tokenList.map { token ->
                         PushSendResult(
                             token = token,
-                            isSuccess = false
+                            isSuccess = false,
+                            errorMessage = "Internal error"
                         )
                     })
                     return@forEach
@@ -66,7 +67,8 @@ class PushService(
                         pushSendResultList.add(
                             PushSendResult(
                                 token = tokenList[index],
-                                isSuccess = message.isSuccessful
+                                isSuccess = message.isSuccessful,
+                                errorMessage = message.exception?.message
                             )
                         )
                     }
