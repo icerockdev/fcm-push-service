@@ -1,3 +1,3 @@
 package com.icerockdev.service.fcmpush
 
-data class PushSendResult(val token: String, val isSuccess: Boolean)
+data class PushSendResult(val token: String, val isSuccess: Boolean, val errorMessage: String? = null)
