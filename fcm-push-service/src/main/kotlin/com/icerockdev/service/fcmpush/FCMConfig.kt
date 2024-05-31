@@ -5,5 +5,6 @@
 package com.icerockdev.service.fcmpush
 
 data class FCMConfig(
-    val googleServiceAccountJson: String
+    val googleServiceAccountJson: String,
+    val lateInit: Boolean = false
 )
