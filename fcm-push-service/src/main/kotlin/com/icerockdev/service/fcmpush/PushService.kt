@@ -24,18 +24,21 @@ import org.slf4j.LoggerFactory
 class PushService(
     private val coroutineScope: CoroutineScope,
     private val pushRepository: IPushRepository,
-    config: FCMConfig
+    private val config: FCMConfig
 ) {
-    private val firebaseMessaging: FirebaseMessaging
+    private lateinit var firebaseMessaging: FirebaseMessaging
 
     init {
-        val options = FirebaseOptions.builder()
-            .setCredentials(GoogleCredentials.fromStream(config.googleServiceAccountJson.byteInputStream()))
-            .build()
-        firebaseMessaging = FirebaseMessaging.getInstance(FirebaseApp.initializeApp(options))
+        if (!config.lateInit) {
+            initFirebaseMessagingService()
+        }
     }
 
     fun sendAsync(payLoad: FCMPayLoad): Deferred<PushResult> {
+        if (config.lateInit) {
+            initFirebaseMessagingService()
+        }
+
         if (payLoad.tokenList.isEmpty()) {
             throw PushException("Unsupported empty token list")
         }
@@ -162,6 +165,17 @@ class PushService(
             notification = payLoad.notificationObject,
             priority = payLoad.priority
         )
+    }
+
+    private fun initFirebaseMessagingService() {
+        if (this::firebaseMessaging.isInitialized) {
+            return
+        }
+
+        val options = FirebaseOptions.builder()
+            .setCredentials(GoogleCredentials.fromStream(config.googleServiceAccountJson.byteInputStream()))
+            .build()
+        firebaseMessaging = FirebaseMessaging.getInstance(FirebaseApp.initializeApp(options))
     }
 
     private companion object {
