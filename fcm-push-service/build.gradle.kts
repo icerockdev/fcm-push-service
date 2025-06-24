@@ -1,11 +1,11 @@
-import java.util.Base64
-import kotlin.text.String
 /*
  * Copyright 2019 IceRock MAG Inc. Use of this source code is governed by the Apache 2.0 license.
  */
+import java.util.Base64
+import org.jreleaser.model.Active
 
 group = "com.icerockdev.service"
-version = "2.1.2"
+version = "2.2.0"
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -13,6 +13,7 @@ plugins {
     id("maven-publish")
     id("java-library")
     id("signing")
+    id("org.jreleaser") version "1.18.0"
 }
 
 apply(plugin = "kotlin")
@@ -46,15 +47,9 @@ repositories {
     mavenCentral()
 }
 
+val publishRepositoryName = "maven-central-portal-deploy"
 publishing {
-    repositories.maven("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        name = "OSSRH"
-
-        credentials {
-            username = System.getenv("OSSRH_USER")
-            password = System.getenv("OSSRH_KEY")
-        }
-    }
+    repositories.maven(layout.buildDirectory.dir(publishRepositoryName))
     publications {
         register("mavenJava", MavenPublication::class) {
             from(components["java"])
@@ -98,7 +93,7 @@ publishing {
         }
 
         signing {
-            setRequired({!properties.containsKey("libraryPublishToMavenLocal")})
+            setRequired({ !properties.containsKey("libraryPublishToMavenLocal") })
             val signingKeyId: String? = System.getenv("SIGNING_KEY_ID")
             val signingPassword: String? = System.getenv("SIGNING_PASSWORD")
             val signingKey: String? = System.getenv("SIGNING_KEY")?.let { base64Key ->
@@ -106,6 +101,36 @@ publishing {
             }
             useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
             sign(publishing.publications["mavenJava"])
+        }
+    }
+}
+
+jreleaser {
+    gitRootSearch = true
+    release {
+        generic {
+            skipRelease = true
+            skipTag = true
+            changelog {
+                enabled = false
+            }
+            token = "EMPTY"
+        }
+    }
+    deploy {
+        maven {
+            mavenCentral.create("sonatype") {
+                enabled = !properties.containsKey("libraryPublishToMavenLocal")
+                applyMavenCentralRules = true
+                sign = false
+                active = Active.ALWAYS
+                url = "https://central.sonatype.com/api/v1/publisher"
+                stagingRepository(layout.buildDirectory.dir(publishRepositoryName).get().toString())
+                setAuthorization("Basic")
+                retryDelay = 60
+                username = System.getenv("OSSRH_USER")
+                password = System.getenv("OSSRH_KEY")
+            }
         }
     }
 }
